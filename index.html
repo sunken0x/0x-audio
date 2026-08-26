@@ -152,35 +152,57 @@
     check.
   </p>
 
-  <h2>SO HOW DO I PUT MY MUSIC ON THERE?</h2>
+  <h2>WHY THIS MATTERS</h2>
 
-  <p>Five steps. Right now step three is the hard one, and that is being fixed.</p>
+  <p>
+    On-chain art solved pictures. An image can live entirely on Ethereum with no server and
+    no link to rot, and that argument is over. Everyone agrees it was worth doing.
+  </p>
 
-  <table>
-    <tr><th>1</th><td><strong>Gather your sounds.</strong> A set of samples. Single notes for
-      an instrument, or one-shots for a drum kit. Whatever you would load into a sampler.</td></tr>
-    <tr><th>2</th><td><strong>Make them small.</strong> Encode to Opus. You are paying gas by
-      the byte, so smaller is literally cheaper. The reference piano is 19 notes in 434&nbsp;KB.</td></tr>
-    <tr><th>3</th><td><strong>Pack them into a crate.</strong> One file: a four-byte length,
-      then a manifest listing each sound and where it sits, then all the audio joined end to
-      end. <span class="dim">Today this needs a developer. See below.</span></td></tr>
-    <tr><th>4</th><td><strong>Put it on chain.</strong> Go to
-      <a href="https://ethfs.xyz" target="_blank" rel="noopener">ethfs.xyz</a>, connect your
-      wallet, drag the file in, pay the gas. That is the whole upload.</td></tr>
-    <tr><th>5</th><td><strong>That is it.</strong> Your sounds are on Ethereum under a filename.
-      Anyone can read them, forever, without asking you. Nothing to host and nothing to maintain.</td></tr>
-  </table>
+  <p>
+    Sound never got there. Audio is big, and there has never been an agreed way to store or
+    read it, so on-chain music has been made one piece at a time, each one sealed inside the
+    artwork that produced it. Nothing gets shared. Nothing gets reused. There is no commons,
+    just a scattering of private islands.
+  </p>
+
+  <p>
+    A format is what turns scattered files into a commons. Agree on one shape, and every
+    instrument anyone puts on chain becomes available to everyone else's work, permanently,
+    with no company standing in the middle taking a cut or shutting it off.
+  </p>
 
   <blockquote>
-    <strong>Being straight about step 3.</strong> There is no drag-and-drop crate maker yet, so
-    right now packing a crate needs someone who can write a script. That is the next thing being
-    built, and until it exists this format is easier to read than it is to write. Saying otherwise
-    would be selling you something.
+    The open metaverse can already show you anything. This is how it starts to sound like
+    something.
   </blockquote>
 
   <p>
-    Reading is already easy. Any crate on chain can be loaded and played today with the player
-    in this repo, in about ten lines. The hard half is the half being worked on.
+    That is the whole ambition. It is not a product, not a platform, and not something
+    anyone gets to own. A format is only worth having if nobody controls it, which is why
+    this is CC0, and why composers are deliberately left outside it. Own the format and
+    you own the artists. Nobody should.
+  </p>
+
+  <h2>IT ALREADY WORKS</h2>
+
+  <p>
+    None of this is a proposal waiting on permission. Both halves are real and on chain
+    today:
+  </p>
+
+  <table>
+    <tr><th>THE PIANO</th><td>A real Kawai grand, 19 notes, stored on Ethereum, CC0. Free
+      for anyone to use in anything, forever. Nobody has to ask, including you.</td></tr>
+    <tr><th>THE PROOF</th><td><strong>Audio Maps</strong> — 1,000 pieces built on this
+      format, now held by <strong>714 collectors</strong>. Sold out on mint day. The art,
+      the instrument and the music all live on chain.</td></tr>
+  </table>
+
+  <p class="dim">
+    A drag-and-drop tool for making your own crates is the next thing being built. Until it
+    exists, this format is easier to read than to write, and saying otherwise would be
+    selling you something.
   </p>
 
   <h2 id="technical">FOR PEOPLE WHO BUILD THINGS</h2>
