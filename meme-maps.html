@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Meme Maps — every Meme card has a sound</title>
+<style>
+  :root{--paper:#0b0c0e;--ink:#eceae4;--dim:#8b8a84;--line:#22252a;--accent:#76ff03;
+        --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--mono);line-height:1.65}
+  a{color:var(--accent);text-decoration:none}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 24px}
+  header{border-bottom:1px solid var(--line);padding:20px 0}
+  header .wrap{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+  .brand{font-size:14px;letter-spacing:.3em;font-weight:600}
+  .back{font-size:11px;letter-spacing:.2em;color:var(--dim)}
+  h1{font-size:clamp(21px,3.4vw,30px);margin:34px 0 10px;font-weight:600}
+  p{font-size:14px;margin:0 0 14px}.dim{color:var(--dim)}
+  .bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:20px 0}
+  input,select,button{background:#0d0f12;border:1px solid var(--line);color:var(--ink);
+    font-family:var(--mono);font-size:13px;padding:9px 11px}
+  input{flex:1;min-width:190px}
+  input:focus,select:focus{outline:none;border-color:var(--accent)}
+  button{cursor:pointer;letter-spacing:.1em}
+  button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+  button:disabled{opacity:.35;cursor:not-allowed}
+  #stage{display:grid;grid-template-columns:1fr 300px;gap:22px;margin:8px 0 40px}
+  @media(max-width:820px){#stage{grid-template-columns:1fr}}
+  canvas{width:100%;aspect-ratio:4/3;background:#000;border:1px solid var(--line);display:block}
+  .panel{border:1px solid var(--line);background:#101216;padding:16px 18px;font-size:13px;align-self:start}
+  .panel h3{margin:0 0 4px;font-size:14px;letter-spacing:.04em}
+  .panel .artist{color:var(--dim);font-size:12px;margin-bottom:14px}
+  .kv{display:flex;justify-content:space-between;gap:12px;padding:4px 0;border-bottom:1px solid var(--line)}
+  .kv:last-child{border:0}
+  .kv b{font-weight:600;color:var(--accent)}
+  #status{font-size:12px;color:var(--dim);min-height:18px}
+  .results{max-height:210px;overflow:auto;border:1px solid var(--line);background:#0d0f12;display:none}
+  .results div{padding:7px 11px;font-size:12.5px;cursor:pointer;border-bottom:1px solid var(--line)}
+  .results div:hover{background:#151a1f;color:var(--accent)}
+  footer{border-top:1px solid var(--line);padding:22px 0 60px;color:var(--dim);font-size:12px}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <div class="brand">MEME MAPS</div><a class="back" href="./">← 0x AUDIO</a>
+</div></header>
+
+<main class="wrap">
+  <h1>Every Meme card has a sound hiding in it.</h1>
+  <p class="dim">
+    Pick any card from The Memes. Its identity on chain decides the key, the tempo and the
+    tune, and the picture becomes the landscape the music moves through. Played on a grand
+    piano that is stored on Ethereum, loaded straight off the chain.
+  </p>
+
+  <div class="bar">
+    <input id="q" placeholder="Search 538 Meme cards — name, artist, or number" autocomplete="off" />
+    <button id="rand">RANDOM</button>
+    <button id="play" disabled>▶ PLAY</button>
+  </div>
+  <div class="results" id="results"></div>
+  <div id="status">loading cards…</div>
+
+  <div id="stage">
+    <canvas id="cv" width="1000" height="750"></canvas>
+    <div class="panel" id="panel"><span class="dim">pick a card</span></div>
+  </div>
+</main>
+
+<footer><div class="wrap">
+  0x Audio · piano read live from EthFS <code>0xFe1411…dFa0FB</code> · CC0
+</div></footer>
+
+<script>
+const $=s=>document.querySelector(s);
+const CONTRACT="0x33FD426905F149f8376e227d0C9D3340AaD17aF1";
+const FS="0xFe1411d6864592549AdE050215482e4385dFa0FB";
+const RPCS=["https://ethereum-rpc.publicnode.com","https://eth.llamarpc.com","https://cloudflare-eth.com"];
+let memes=[], cur=null, ac=null, samples=null, playing=false, raf=null, img=null, bright=null;
+
+/* ---------- deterministic seed from the card's on-chain identity ---------- */
+function seedOf(id){
+  const s=(CONTRACT+"/"+id).toLowerCase();
+  let h=2166136261>>>0;
+  for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); }
+  return h>>>0;
+}
+function rng(seed){ let a=seed>>>0; return ()=>{ a^=a<<13;a>>>=0;a^=a>>17;a^=a<<5;a>>>=0; return a/4294967296; }; }
+
+const KEYS=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+const SCALES={minor:[0,2,3,5,7,8,10],dorian:[0,2,3,5,7,9,10],major:[0,2,4,5,7,9,11],penta:[0,3,5,7,10]};
+const MOODS=[["Still",52],["Drift",58],["Sway",66],["Pulse",76],["Drive",88],["Surge",104],["Storm",120]];
+const PAL=[["#76ff03","#0a1005"],["#2ce1f5","#00121b"],["#ff007f","#12000a"],["#ffb300","#140c00"],
+           ["#c2d6ff","#080a10"],["#ff5252","#140404"],["#b388ff","#0d0714"],["#00e5a0","#00120c"]];
+
+function compose(id){
+  const R=rng(seedOf(id));
+  const key=KEYS[Math.floor(R()*12)];
+  const scaleName=Object.keys(SCALES)[Math.floor(R()*4)];
+  const mood=MOODS[Math.floor(R()*MOODS.length)];
+  const pal=PAL[Math.floor(R()*PAL.length)];
+  const root=36+KEYS.indexOf(key)+12*(1+Math.floor(R()*2));
+  const sc=SCALES[scaleName];
+  const notes=[];
+  const bars=4, steps=16;
+  for(let b=0;b<bars;b++) for(let s=0;s<steps;s++){
+    if(R()<0.34){
+      const deg=sc[Math.floor(R()*sc.length)]+12*Math.floor(R()*3);
+      notes.push({t:(b*steps+s)*(60/mood[1]/4), n:root+deg, v:.35+R()*.45,
+                  d:(0.4+R()*1.6)*(60/mood[1])});
+    }
+  }
+  return {key,scale:scaleName,tempo:mood[1],mood:mood[0],ink:pal[0],bg:pal[1],notes,
+          loop:bars*steps*(60/mood[1]/4)};
+}
+
+/* ---------- load the piano off chain ---------- */
+function noteToMidi(n){
+  const m=/^([A-G])(#?)(-?\d+)$/.exec(n); if(!m) return null;
+  return KEYS.indexOf(m[1]+m[2])+12*(parseInt(m[3],10)+1);
+}
+async function rpc(data){
+  for(const url of RPCS){
+    try{
+      const r=await fetch(url,{method:"POST",headers:{"content-type":"application/json"},
+        body:JSON.stringify({jsonrpc:"2.0",id:1,method:"eth_call",params:[{to:FS,data},"latest"]})});
+      const j=await r.json(); if(j.error) continue; return j.result;
+    }catch(e){}
+  }
+  throw new Error("no RPC reachable");
+}
+async function loadPiano(){
+  if(samples) return samples;
+  $('#status').textContent="reading the piano off Ethereum…";
+  const name="audiomaps-piano-v1.bin";
+  const hx=[...new TextEncoder().encode(name)].map(b=>b.toString(16).padStart(2,'0')).join('');
+  const data="0x60f9bb11"+(32).toString(16).padStart(64,'0')+
+             name.length.toString(16).padStart(64,'0')+hx.padEnd(Math.ceil(hx.length/64)*64,'0');
+  const res=await rpc(data);
+  // abi string: skip offset word + length word
+  const len=parseInt(res.slice(66,130),16);
+  let b64="";
+  const raw=res.slice(130,130+len*2);
+  for(let i=0;i<raw.length;i+=2) b64+=String.fromCharCode(parseInt(raw.substr(i,2),16));
+  const bin=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
+  const ml=new DataView(bin.buffer).getUint32(0);
+  const man=JSON.parse(new TextDecoder().decode(bin.slice(4,4+ml)));
+  ac=ac||new (window.AudioContext||window.webkitAudioContext)();
+  const out=[];
+  for(const [slot,off,l] of man){
+    const midi=noteToMidi(slot); if(midi==null) continue;
+    try{
+      const buf=await ac.decodeAudioData(bin.slice(4+ml+off,4+ml+off+l).buffer.slice(0));
+      out.push({midi:midi+12, buf});          // files sit an octave low; +12 to sound right
+    }catch(e){}
+  }
+  out.sort((a,b)=>a.midi-b.midi);
+  samples=out;
+  $('#status').textContent=`piano loaded from chain · ${out.length} notes`;
+  return samples;
+}
+
+/* ---------- visual: the meme as a landscape ---------- */
+function loadImage(url){
+  return new Promise((res,rej)=>{
+    const i=new Image(); i.crossOrigin="anonymous";
+    i.onload=()=>res(i); i.onerror=()=>rej(new Error("image blocked"));
+    i.src=url;
+  });
+}
+function brightnessField(image,w,h){
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const g=c.getContext('2d',{willReadFrequently:true});
+  g.drawImage(image,0,0,w,h);
+  const d=g.getImageData(0,0,w,h).data, f=new Float32Array(w*h);
+  for(let i=0,p=0;i<f.length;i++,p+=4) f[i]=(d[p]*.299+d[p+1]*.587+d[p+2]*.114)/255;
+  return f;
+}
+const GW=150, GH=112;
+function draw(t){
+  const cv=$('#cv'), g=cv.getContext('2d'), W=cv.width, H=cv.height;
+  g.fillStyle=cur.piece.bg; g.fillRect(0,0,W,H);
+  if(!bright) return;
+  g.strokeStyle=cur.piece.ink; g.lineWidth=1.6; g.globalAlpha=.92;
+  const rows=64;
+  for(let r=0;r<rows;r++){
+    const v=r/(rows-1);
+    g.beginPath();
+    for(let x=0;x<=GW;x++){
+      const u=x/GW;
+      const b=bright[Math.min(GH-1,Math.round(v*(GH-1)))*GW+Math.min(GW-1,x)];
+      const lift=(b-0.5)*150;                        // the picture pushes the line
+      const wob=Math.sin(u*7+t*0.0016+r*0.22)*7*(0.4+b);
+      const px=20+u*(W-40), py=18+v*(H-36)+lift+wob;
+      x?g.lineTo(px,py):g.moveTo(px,py);
+    }
+    g.stroke();
+  }
+  g.globalAlpha=1;
+}
+function loop(){ draw(performance.now()); raf=requestAnimationFrame(loop); }
+
+/* ---------- audio ---------- */
+function playNote(midi,when,dur,vel){
+  if(!samples||!samples.length) return;
+  let best=samples[0];
+  for(const s of samples) if(Math.abs(s.midi-midi)<Math.abs(best.midi-midi)) best=s;
+  const src=ac.createBufferSource(); src.buffer=best.buf;
+  src.playbackRate.value=Math.pow(2,(midi-best.midi)/12);
+  const g=ac.createGain();
+  g.gain.setValueAtTime(0,when);
+  g.gain.linearRampToValueAtTime(vel*0.5,when+0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001,when+Math.max(0.25,dur));
+  src.connect(g).connect(ac.destination);
+  src.start(when); src.stop(when+Math.max(0.3,dur)+0.15);
+}
+let timer=null;
+function start(){
+  if(!cur) return;
+  stop();
+  playing=true; $('#play').textContent="■ STOP";
+  const schedule=()=>{
+    const t0=ac.currentTime+0.06;
+    cur.piece.notes.forEach(n=>playNote(n.n,t0+n.t,n.d,n.v));
+    timer=setTimeout(schedule, cur.piece.loop*1000);
+  };
+  schedule();
+}
+function stop(){
+  playing=false; $('#play').textContent="▶ PLAY";
+  if(timer){clearTimeout(timer);timer=null;}
+}
+
+/* ---------- picking ---------- */
+async function pick(m){
+  stop(); cur={meme:m, piece:compose(m.id)};
+  $('#panel').innerHTML=`
+    <h3>#${m.id} — ${m.name.replace(/</g,'&lt;')}</h3>
+    <div class="artist">${(m.artist||'').replace(/</g,'&lt;')}</div>
+    <div class="kv"><span>tune</span><b>${cur.piece.mood.toUpperCase()}</b></div>
+    <div class="kv"><span>key</span><b>${cur.piece.key} ${cur.piece.scale}</b></div>
+    <div class="kv"><span>tempo</span><b>${cur.piece.tempo} bpm</b></div>
+    <div class="kv"><span>notes</span><b>${cur.piece.notes.length}</b></div>
+    <div class="kv"><span>seeded by</span><b>token ${m.id}</b></div>`;
+  $('#results').style.display='none'; $('#q').value=`#${m.id} ${m.name}`;
+  bright=null;
+  try{
+    img=await loadImage(m.thumbnail||m.image);
+    bright=brightnessField(img,GW,GH);
+  }catch(e){ $('#status').textContent="image blocked, showing waves only"; }
+  if(!raf) loop(); else draw(performance.now());
+  $('#play').disabled=false;
+}
+
+$('#q').oninput=e=>{
+  const v=e.target.value.trim().toLowerCase();
+  const box=$('#results');
+  if(!v){ box.style.display='none'; return; }
+  const hits=memes.filter(m=>String(m.id)===v||(m.name||'').toLowerCase().includes(v)||(m.artist||'').toLowerCase().includes(v)).slice(0,40);
+  box.innerHTML=hits.map(m=>`<div data-id="${m.id}">#${m.id} · ${(m.name||'').replace(/</g,'&lt;')} <span class="dim">— ${(m.artist||'').replace(/</g,'&lt;')}</span></div>`).join('');
+  box.style.display=hits.length?'block':'none';
+  box.querySelectorAll('div[data-id]').forEach(d=>d.onclick=()=>pick(memes.find(m=>m.id==d.dataset.id)));
+};
+$('#rand').onclick=()=>{ if(memes.length) pick(memes[Math.floor(Math.random()*memes.length)]); };
+$('#play').onclick=async()=>{
+  if(playing){ stop(); return; }
+  ac=ac||new (window.AudioContext||window.webkitAudioContext)();
+  await ac.resume();
+  try{ await loadPiano(); }catch(e){ $('#status').textContent="could not reach the chain: "+e.message; return; }
+  start();
+};
+
+fetch('./memes.json').then(r=>r.json()).then(d=>{
+  memes=d; $('#status').textContent=`${d.length} Meme cards loaded · pick one`;
+  pick(memes.find(m=>m.id===1)||memes[0]);
+}).catch(e=>$('#status').textContent='could not load memes.json');
+</script>
+</body>
+</html>
