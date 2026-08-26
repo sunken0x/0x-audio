@@ -152,6 +152,37 @@
     check.
   </p>
 
+  <h2>SO HOW DO I PUT MY MUSIC ON THERE?</h2>
+
+  <p>Five steps. Right now step three is the hard one, and that is being fixed.</p>
+
+  <table>
+    <tr><th>1</th><td><strong>Gather your sounds.</strong> A set of samples. Single notes for
+      an instrument, or one-shots for a drum kit. Whatever you would load into a sampler.</td></tr>
+    <tr><th>2</th><td><strong>Make them small.</strong> Encode to Opus. You are paying gas by
+      the byte, so smaller is literally cheaper. The reference piano is 19 notes in 434&nbsp;KB.</td></tr>
+    <tr><th>3</th><td><strong>Pack them into a crate.</strong> One file: a four-byte length,
+      then a manifest listing each sound and where it sits, then all the audio joined end to
+      end. <span class="dim">Today this needs a developer. See below.</span></td></tr>
+    <tr><th>4</th><td><strong>Put it on chain.</strong> Go to
+      <a href="https://ethfs.xyz" target="_blank" rel="noopener">ethfs.xyz</a>, connect your
+      wallet, drag the file in, pay the gas. That is the whole upload.</td></tr>
+    <tr><th>5</th><td><strong>That is it.</strong> Your sounds are on Ethereum under a filename.
+      Anyone can read them, forever, without asking you. Nothing to host and nothing to maintain.</td></tr>
+  </table>
+
+  <blockquote>
+    <strong>Being straight about step 3.</strong> There is no drag-and-drop crate maker yet, so
+    right now packing a crate needs someone who can write a script. That is the next thing being
+    built, and until it exists this format is easier to read than it is to write. Saying otherwise
+    would be selling you something.
+  </blockquote>
+
+  <p>
+    Reading is already easy. Any crate on chain can be loaded and played today with the player
+    in this repo, in about ten lines. The hard half is the half being worked on.
+  </p>
+
   <h2 id="technical">FOR PEOPLE WHO BUILD THINGS</h2>
 
   <p class="dim">
