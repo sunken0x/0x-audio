@@ -60,53 +60,102 @@
 
 <main class="wrap">
 
-  <h1>A file format for audio that lives on Ethereum.</h1>
+  <h1>A grand piano lives on Ethereum.<br>Anyone can play it. Nobody has to ask.</h1>
 
   <p class="lede">
-    There are sounds on chain already. There is no agreed way to read them, so anyone who
-    wants to use anyone else's samples has to ask the person who put them there. That is
-    the problem. 0x Audio is the format that fixes it.
+    0x Audio is a shared format for music stored on the blockchain. It does for on-chain
+    sound what the JPEG did for pictures: any tool can open it, anyone can use it, and no
+    one needs permission from the person who made it.
   </p>
 
-  <p class="dim">Open. CC0. No permission needed, from anyone, ever.</p>
+  <p class="dim">Free forever. CC0. No licence, no gatekeeper, no server to go down.</p>
 
-  <h2>THE SPLIT</h2>
+  <h2>THE PROBLEM</h2>
 
   <p>
-    Two kinds of thing, and keeping them apart is the whole idea. <strong>Agreements</strong>
-    are passive data: file shapes that two sides both speak. <strong>Tools</strong> are code,
-    and code is replaceable.
+    There is real music on Ethereum already. Pianos, drum kits, whole sample libraries,
+    stored on the chain itself and meant to last forever.
   </p>
 
-  <div class="grid">
-    <div class="box">
-      <h3>CRATE</h3><div class="file">.crate — agreement</div>
-      <p>A box of sounds. Samples plus a manifest describing them, in one file. Nothing in a crate runs.</p>
-    </div>
-    <div class="box">
-      <h3>SCORE</h3><div class="file">.score — agreement</div>
-      <p>A list of note events and a small header. No audio in it, and it names no samples.</p>
-    </div>
-    <div class="box">
-      <h3>PLAYER</h3><div class="file">tool</div>
-      <p>Reads both and makes sound. Around 150 lines. It decides nothing.</p>
-    </div>
-    <div class="box">
-      <h3>INSPECTOR</h3><div class="file">tool</div>
-      <p>A face on the player. Doubles as the conformance checker.</p>
-    </div>
-  </div>
+  <p>
+    But there is no agreed way to read any of it. Every library is locked to whoever built
+    it. If you want to use someone else's drums in your artwork, you have to message them
+    and hope they explain how. That has actually been happening, one DM at a time.
+  </p>
+
+  <p>
+    Sounds on a blockchain that nobody else can open are not really public. They are just
+    stored in the open.
+  </p>
+
+  <h2>WHAT CHANGES</h2>
+
+  <p>
+    One agreed shape for the files, so everything fits everything else. Put your sounds in
+    a <strong>crate</strong>. Write your notes in a <strong>score</strong>. Any
+    <strong>player</strong> can read both, including one somebody else wrote.
+  </p>
 
   <blockquote>
-    Swap the crate under the same score and you get a different piece. That split is the
-    point. The crate is the piano, the score is the sheet music, and the composer is the
-    pianist.
+    The crate is the piano. The score is the sheet music. The composer is the pianist.
+    Change any one of them and the other two still work.
   </blockquote>
 
   <p>
-    <strong>Composers are deliberately outside the standard.</strong> Standardise one and you
-    weld the format to a single aesthetic, and to its author. What writes a score, and what
-    a score sounds like, are nobody's business but the artist's.
+    That is the whole idea. Swap the crate under the same score and the same tune plays on
+    a different instrument. Hand your score to someone else and it still works, because
+    nothing in it depends on you.
+  </p>
+
+  <h2>WHAT IT MEANS FOR YOU</h2>
+
+  <div class="grid">
+    <div class="box">
+      <h3>IF YOU MAKE MUSIC</h3>
+      <div class="file">no code needed</div>
+      <p>Put a set of samples on chain once and anyone can build with them, forever. You
+      are not running a service, and there is nothing to maintain. It just sits there and
+      works.</p>
+    </div>
+    <div class="box">
+      <h3>IF YOU MAKE ART</h3>
+      <div class="file">no licence, no server</div>
+      <p>Use a real instrument in your piece without hosting audio, paying for samples, or
+      asking anyone. The sound is already on the chain. Point at it and play.</p>
+    </div>
+    <div class="box">
+      <h3>IF YOU COLLECT</h3>
+      <div class="file">it cannot break</div>
+      <p>Art that plays music, where the music is not a link that dies. The instrument, the
+      notes and the picture all live on Ethereum. No server, no expiry.</p>
+    </div>
+  </div>
+
+  <h2>THE FREE PIANO</h2>
+
+  <p>
+    To prove it works, there is a grand piano on Ethereum right now. Nineteen recorded
+    notes of a real Kawai grand, put there so anyone can use it. It is CC0, which means it
+    belongs to everyone and costs nothing.
+  </p>
+
+  <p>
+    It is not a demo or a promise. It is a file on the blockchain, and this command reads
+    it back:
+  </p>
+
+<pre>cast call 0xFe1411d6864592549AdE050215482e4385dFa0FB \
+  "readFile(string)(string)" "audiomaps-piano-v1.bin" --rpc-url &lt;mainnet rpc&gt;</pre>
+
+  <p class="dim">
+    If that means nothing to you, that is fine. It means the piano is real and anyone can
+    check.
+  </p>
+
+  <h2 id="technical">FOR PEOPLE WHO BUILD THINGS</h2>
+
+  <p class="dim">
+    Everything below is the actual specification. Skip it unless you are implementing.
   </p>
 
   <h2>THE CRATE, IN FULL</h2>
