@@ -1473,17 +1473,33 @@ function playCard(m){
     q.addEventListener("blur", () => setTimeout(() => { box.style.bottom = ""; }, 100));
   }
 
-  /* ---- phones have no "/" key: press and hold the artwork instead ---- */
-  let holdTimer = null, heldOpen = false;
+  /* ---- phones have no "/" key: press and hold the artwork instead.
+         A real finger is never perfectly still, so only a genuine drag
+         cancels the hold, not the tiny wobble of holding still. ---- */
+  let holdTimer = null, heldOpen = false, startX = 0, startY = 0;
   const surface = document.getElementById("stage") || document.body;
-  surface.addEventListener("touchstart", () => {
+  const SLOP = 14;   // px of wobble allowed before it counts as a drag
+
+  surface.addEventListener("touchstart", e => {
     if (open) return;
+    const t = e.touches && e.touches[0];
+    startX = t ? t.clientX : 0; startY = t ? t.clientY : 0;
     heldOpen = false;
     clearTimeout(holdTimer);
-    holdTimer = setTimeout(() => { heldOpen = true; showPicker(); }, 550);
+    holdTimer = setTimeout(() => { heldOpen = true; showPicker(); }, 500);
   }, { passive: true });
-  ["touchend", "touchmove", "touchcancel"].forEach(ev =>
+
+  surface.addEventListener("touchmove", e => {
+    const t = e.touches && e.touches[0];
+    if (!t) return;
+    if (Math.abs(t.clientX - startX) > SLOP || Math.abs(t.clientY - startY) > SLOP) {
+      clearTimeout(holdTimer);
+    }
+  }, { passive: true });
+
+  ["touchend", "touchcancel"].forEach(ev =>
     surface.addEventListener(ev, () => clearTimeout(holdTimer), { passive: true }));
+
   /* a long press must not also count as the tap that starts and stops the music */
   document.addEventListener("click", e => {
     if (heldOpen) { heldOpen = false; e.stopPropagation(); e.preventDefault(); }
