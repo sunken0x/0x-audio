@@ -1,0 +1,151 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>0x Audio — Inspector</title>
+<style>
+:root{--bg:#05070d;--ink:#cfd6e6;--cy:#2ce1f5;--hot:#ff6b6b;--dim:#6a768e}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);
+ font:13px/1.5 ui-monospace,Menlo,monospace;padding:22px}
+h1{font-size:14px;letter-spacing:.14em;margin:0 0 2px;font-weight:700}
+h1 b{color:var(--cy)}
+.sub{color:var(--dim);font-size:11px;margin-bottom:18px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+input,button,select{background:#12203a;color:var(--cy);border:1px solid #2ce1f544;
+ padding:8px 11px;font:inherit;border-radius:3px}
+input{min-width:280px;color:var(--ink)}
+button{cursor:pointer}button:hover{background:#1b2f52}
+button.go{background:var(--hot);color:#05070d;font-weight:700;border-color:transparent}
+.panel{border:1px solid #1d2740;border-radius:5px;padding:14px;margin-bottom:14px;background:#080b14}
+.panel h2{font-size:11px;letter-spacing:.12em;color:var(--dim);margin:0 0 10px;font-weight:400}
+table{border-collapse:collapse;width:100%;font-size:12px}
+td,th{text-align:left;padding:3px 10px 3px 0;border-bottom:1px solid #131a2b}
+th{color:var(--dim);font-weight:400}
+.keys{display:flex;flex-wrap:wrap;gap:5px}
+.key{background:#12203a;border:1px solid #2ce1f533;border-radius:3px;padding:7px 10px;
+ cursor:pointer;font-size:12px}
+.key:hover{background:#1b2f52}
+.key.bad{border-color:#ff6b6b66;color:#ff9a9a}
+.ok{color:#7ee787}.bad{color:var(--hot)}.warn{color:#e3b341}
+#log{white-space:pre-wrap;font-size:11px;color:var(--dim);max-height:220px;overflow:auto}
+</style>
+
+<h1><b>0x AUDIO</b> — INSPECTOR</h1>
+<div class=sub>Paste an EthFS filename, read the crate, click a key to hear it.
+Clicking a key is the player performing a one-note score — if it sounds, the crate conforms.</div>
+
+<div class=row>
+  <input id=name value="audiomaps-piano-v1.bin" spellcheck=false>
+  <input id=rpc value="https://ethereum-rpc.publicnode.com" spellcheck=false>
+  <button class=go id=load>READ FROM CHAIN</button>
+  <button id=file>load a local file</button>
+  <input type=file id=picker hidden>
+</div>
+
+<div class=panel><h2>CONFORMANCE</h2><div id=conf>nothing loaded</div></div>
+<div class=panel><h2>KEYS</h2><div class=keys id=keys></div></div>
+<div class=panel><h2>MANIFEST</h2><div id=man>—</div></div>
+<div class=panel><h2>LOG</h2><div id=log></div></div>
+
+<script type="module">
+import { parseCrate, parseScore, noteToMidi, Player, fetchCrate, FILESTORE } from "./player.js";
+
+const $ = id => document.getElementById(id);
+const log = m => { $("log").textContent += m + "\n"; $("log").scrollTop = 1e6; };
+let ctx = null, player = null, crate = null;
+
+// The reference crate's two known defects, applied as player options rather than
+// silently inside the parser — the parser must report what is actually there.
+const KNOWN = { "audiomaps-piano-v1.bin": { transpose: 12, skip: ["C7"] } };
+
+function conformance(c, filename){
+  const out = [];
+  const n = c.samples.length;
+  out.push(`<span class=ok>PASS</span> container parsed — ${n} samples`);
+
+  // offsets must tile with no gap or overlap
+  let cursor = 0, tiles = true;
+  for (const s of c.samples){ if (s.offset !== cursor) tiles = false; cursor = s.offset + s.length; }
+  out.push(tiles ? `<span class=ok>PASS</span> offsets contiguous, ${cursor} audio bytes`
+                 : `<span class=bad>FAIL</span> offsets have a gap or overlap`);
+
+  // every slot should decode; check the container magic cheaply first
+  let ogg = 0;
+  for (const s of c.samples) if (String.fromCharCode(...s.bytes.slice(0,4)) === "OggS") ogg++;
+  out.push(ogg === n ? `<span class=ok>PASS</span> all ${n} samples are Ogg`
+                     : `<span class=warn>WARN</span> ${ogg}/${n} samples are Ogg`);
+
+  // v0.1 has no header, so these can only ever be warnings
+  out.push(`<span class=warn>WARN</span> no header: licence, codec and mapping are undeclared (crate v0.1 has no field for them)`);
+
+  const odd = c.samples.filter(s => s.length < 12000);
+  if (odd.length) out.push(`<span class=warn>WARN</span> unusually small: ${odd.map(s=>s.slot+" ("+s.length+"B)").join(", ")} — likely truncated`);
+
+  const known = KNOWN[filename];
+  if (known){
+    out.push(`<span class=warn>KNOWN</span> this crate is labelled an octave below pitch; player applies +${known.transpose}`);
+    out.push(`<span class=warn>KNOWN</span> skipping ${known.skip.join(", ")} — broken sample`);
+  }
+  $("conf").innerHTML = out.join("<br>");
+}
+
+function render(c, filename){
+  crate = c;
+  conformance(c, filename);
+  $("man").innerHTML = "<table><tr><th>slot</th><th>midi</th><th>offset</th><th>bytes</th></tr>" +
+    c.samples.map(s => `<tr><td>${s.slot}</td><td>${noteToMidi(s.slot) ?? "—"}</td><td>${s.offset}</td><td>${s.length}</td></tr>`).join("") +
+    "</table>";
+  const skip = new Set((KNOWN[filename]||{}).skip || []);
+  $("keys").innerHTML = c.samples.map(s =>
+    `<button class="key${skip.has(s.slot)?" bad":""}" data-slot="${s.slot}">${s.slot}</button>`).join("");
+  for (const b of document.querySelectorAll(".key")) b.onclick = () => hit(b.dataset.slot, filename);
+}
+
+async function ensure(filename){
+  if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+  await ctx.resume();
+  if (!player || player._for !== filename){
+    const o = KNOWN[filename] || {};
+    player = new Player(ctx, { transpose: o.transpose || 0, skip: o.skip || [] });
+    player._for = filename;
+    const n = await player.load(crate);
+    log(`decoded ${n} samples into the player`);
+  }
+}
+
+// clicking a key IS a one-note score
+async function hit(slot, filename){
+  await ensure(filename);
+  const midi = noteToMidi(slot);
+  if (midi === null) { log(`slot ${slot} is not a note name`); return; }
+  const score = parseScore({ "0xaudio":"score/0.1", bpm:120, ppq:480, length:480,
+                             notes:[[0, midi + (KNOWN[filename]?.transpose || 0), 480, 100]] });
+  player.play(score);
+  log(`${slot} -> midi ${midi + (KNOWN[filename]?.transpose || 0)}`);
+}
+
+$("load").onclick = async () => {
+  const filename = $("name").value.trim();
+  $("conf").textContent = "reading...";
+  log(`readFile("${filename}") on ${FILESTORE}`);
+  try {
+    const c = await fetchCrate(filename, $("rpc").value.trim());
+    log(`got ${c.samples.length} samples`);
+    render(c, filename);
+  } catch (e) {
+    $("conf").innerHTML = `<span class=bad>FAIL</span> ${e.message}`;
+    log("error: " + e.message);
+  }
+};
+
+$("file").onclick = () => $("picker").click();
+$("picker").onchange = async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const c = parseCrate(new Uint8Array(await f.arrayBuffer()));
+    log(`local file ${f.name}: ${c.samples.length} samples`);
+    render(c, f.name);
+  } catch (err) {
+    $("conf").innerHTML = `<span class=bad>FAIL</span> ${err.message}`;
+  }
+};
+</script>

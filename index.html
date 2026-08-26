@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>0x Audio — a file format for on-chain audio</title>
+<meta name="description" content="0x Audio is an open, CC0 file format for audio stored on Ethereum. A crate is samples plus a manifest. A score is note events. A player reads both." />
+<style>
+  :root{
+    --paper:#0b0c0e; --ink:#eceae4; --dim:#8b8a84; --line:#22252a;
+    --accent:#76ff03; --warm:#c2d6ff;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);
+    font-family:var(--mono);-webkit-font-smoothing:antialiased;line-height:1.75}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid rgba(118,255,3,.3)}
+  a:hover{border-bottom-color:var(--accent)}
+  .wrap{max-width:860px;margin:0 auto;padding:0 26px}
+  header{border-bottom:1px solid var(--line);padding:26px 0}
+  header .wrap{display:flex;justify-content:space-between;align-items:baseline;gap:16px}
+  .brand{font-size:15px;letter-spacing:.34em;font-weight:600}
+  .by{font-size:11px;letter-spacing:.26em;color:var(--dim)}
+  .by a{color:var(--dim);border:0}
+  h1{font-size:clamp(26px,4.6vw,40px);line-height:1.25;letter-spacing:-.01em;margin:56px 0 18px;font-weight:600}
+  h2{font-size:12px;letter-spacing:.3em;color:var(--dim);margin:60px 0 18px;font-weight:600;
+     border-top:1px solid var(--line);padding-top:26px}
+  p{margin:0 0 18px;font-size:14.5px}
+  .lede{font-size:16.5px;color:#d8d5cd;max-width:64ch}
+  .dim{color:var(--dim)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(232px,1fr));gap:16px;margin:24px 0}
+  .box{border:1px solid var(--line);padding:18px 18px 20px;background:#101216}
+  .box h3{margin:0 0 8px;font-size:13px;letter-spacing:.16em}
+  .box .file{font-size:11px;color:var(--accent);letter-spacing:.1em;margin-bottom:10px}
+  .box p{font-size:13px;margin:0;color:#c3c1ba}
+  pre{background:#101216;border:1px solid var(--line);padding:16px;overflow-x:auto;
+      font-size:12.5px;line-height:1.7;margin:20px 0}
+  code{font-size:12.5px;color:var(--warm)}
+  table{border-collapse:collapse;width:100%;margin:20px 0;font-size:13px}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--dim);font-weight:600;font-size:11px;letter-spacing:.16em}
+  .status li{margin-bottom:9px;font-size:14px}
+  .done::marker{content:"✓  ";color:var(--accent)}
+  .next::marker{content:"→  ";color:var(--dim)}
+  blockquote{margin:24px 0;padding:14px 18px;border-left:2px solid var(--accent);
+             background:#101216;color:#d8d5cd;font-size:14px}
+  footer{border-top:1px solid var(--line);margin-top:72px;padding:34px 0 70px;color:var(--dim);font-size:12.5px}
+  .cta{display:inline-block;margin:6px 12px 6px 0;padding:11px 18px;border:1px solid var(--line);
+       color:var(--ink);font-size:12.5px;letter-spacing:.12em}
+  .cta:hover{border-color:var(--accent);color:var(--accent)}
+  @media(max-width:600px){ h1{margin-top:38px} .wrap{padding:0 18px} }
+</style>
+</head>
+<body>
+
+<header><div class="wrap">
+  <div class="brand">0x AUDIO</div>
+  <div class="by">BY <a href="https://github.com/sunken0x">SUNKEN0X</a></div>
+</div></header>
+
+<main class="wrap">
+
+  <h1>A file format for audio that lives on Ethereum.</h1>
+
+  <p class="lede">
+    There are sounds on chain already. There is no agreed way to read them, so anyone who
+    wants to use anyone else's samples has to ask the person who put them there. That is
+    the problem. 0x Audio is the format that fixes it.
+  </p>
+
+  <p class="dim">Open. CC0. No permission needed, from anyone, ever.</p>
+
+  <h2>THE SPLIT</h2>
+
+  <p>
+    Two kinds of thing, and keeping them apart is the whole idea. <strong>Agreements</strong>
+    are passive data: file shapes that two sides both speak. <strong>Tools</strong> are code,
+    and code is replaceable.
+  </p>
+
+  <div class="grid">
+    <div class="box">
+      <h3>CRATE</h3><div class="file">.crate — agreement</div>
+      <p>A box of sounds. Samples plus a manifest describing them, in one file. Nothing in a crate runs.</p>
+    </div>
+    <div class="box">
+      <h3>SCORE</h3><div class="file">.score — agreement</div>
+      <p>A list of note events and a small header. No audio in it, and it names no samples.</p>
+    </div>
+    <div class="box">
+      <h3>PLAYER</h3><div class="file">tool</div>
+      <p>Reads both and makes sound. Around 150 lines. It decides nothing.</p>
+    </div>
+    <div class="box">
+      <h3>INSPECTOR</h3><div class="file">tool</div>
+      <p>A face on the player. Doubles as the conformance checker.</p>
+    </div>
+  </div>
+
+  <blockquote>
+    Swap the crate under the same score and you get a different piece. That split is the
+    point. The crate is the piano, the score is the sheet music, and the composer is the
+    pianist.
+  </blockquote>
+
+  <p>
+    <strong>Composers are deliberately outside the standard.</strong> Standardise one and you
+    weld the format to a single aesthetic, and to its author. What writes a score, and what
+    a score sounds like, are nobody's business but the artist's.
+  </p>
+
+  <h2>THE CRATE, IN FULL</h2>
+
+  <p>This is not a proposal. It documents a file that is already on Ethereum mainnet.</p>
+
+<pre>[4-byte big-endian uint32]   manifest length in bytes
+[manifest JSON, UTF-8]       length as above
+[audio bytes]                all samples concatenated, no separators</pre>
+
+  <p>The manifest is a bare JSON array. Each entry is <code>[slot, offset, length]</code>:</p>
+
+<pre>[["A2", 0, 25402], ["A4", 25402, 22260], ["B3", 47662, 27032], ...]</pre>
+
+  <p>
+    Offsets are relative to the start of the audio section, not the file, and they tile
+    contiguously. That is the entire container. No magic number, no version field, no trailer.
+  </p>
+
+  <h2>THE SCORE, IN FULL</h2>
+
+<pre>{
+  "0xaudio": "score/0.1",
+  "bpm": 116,
+  "ppq": 480,
+  "length": 15360,
+  "notes": [
+    [0, 52, 1920, 102],
+    [0, 71, 480, 96],
+    [480, 67, 480, 90]
+  ]
+}</pre>
+
+  <p>
+    A note is four integers, positional: <code>[start, note, duration, velocity]</code>.
+    A reader must reject any file whose <code>0xaudio</code> tag it does not recognise.
+  </p>
+
+  <h2>THE REFERENCE CRATE</h2>
+
+  <p>A grand piano. On chain, CC0, free for anyone to load. Read it yourself:</p>
+
+  <table>
+    <tr><th>FILE</th><td><code>audiomaps-piano-v1.bin</code></td></tr>
+    <tr><th>STORE</th><td>EthFS FileStore <code>0xFe1411d6864592549AdE050215482e4385dFa0FB</code></td></tr>
+    <tr><th>STORED</th><td>593,224 base64 characters</td></tr>
+    <tr><th>DECODED</th><td>444,916 bytes</td></tr>
+    <tr><th>CONTENTS</th><td>19 Opus-in-Ogg samples, VCSL Kawai piano</td></tr>
+  </table>
+
+<pre>cast call 0xFe1411d6864592549AdE050215482e4385dFa0FB \
+  "readFile(string)(string)" "audiomaps-piano-v1.bin" --rpc-url &lt;mainnet rpc&gt;</pre>
+
+  <p class="dim">
+    The FileStore sits at the same address on every chain EthFS supports, so that address
+    is not mainnet-specific.
+  </p>
+
+  <h2>WHERE IT IS UP TO</h2>
+
+  <ul class="status">
+    <li class="done">Crate spec, v0.1 — written against a file already on chain</li>
+    <li class="done">Score spec, v0.1</li>
+    <li class="done">Player — no dependencies, no build step, runs from <code>file://</code></li>
+    <li class="done">Inspector — conformance checker with a face on it</li>
+    <li class="done">Conformance spec — what adheres means, per role</li>
+    <li class="next">Effects, and hosts that patch tools together. Hosts must be many, never one, or the standard quietly becomes a platform.</li>
+    <li class="next">Sync, a wire protocol rather than a file format, further out.</li>
+  </ul>
+
+  <p><strong>The standard exists. Tools are coming.</strong></p>
+
+  <h2>USING IT</h2>
+
+  <p>
+    Take any of it. Put your own sounds in a crate and the player will read them. Write a
+    score against someone else's crate and it will play. Fork the player, throw it away,
+    write a better one. That is what a format is for.
+  </p>
+
+  <p>
+    Everything here is CC0. No licence to accept, no attribution required, no permission to
+    ask. If it is useful, use it.
+  </p>
+
+  <p>
+    <a class="cta" href="https://github.com/sunken0x">SPECS ON GITHUB</a>
+  </p>
+
+</main>
+
+<footer><div class="wrap">
+  0x Audio — an open format for on-chain audio. CC0, no rights reserved.<br>
+  Built by <a href="https://github.com/sunken0x">sunken0x</a>.
+</div></footer>
+
+</body>
+</html>
