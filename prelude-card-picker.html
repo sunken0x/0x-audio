@@ -3685,16 +3685,6 @@ loadSeed(MEMES_CONTRACT, true);
 const CARD_SEED = id => (MEMES_CONTRACT + id.toString(16).padStart(6,"0")).toLowerCase();
 let MEMES = [], curCard = null;
 
-/* Music only. The picture is locked — same mark, same crowd, same palette,
-   whichever card you pick. Only what you HEAR changes. */
-function applyMusicOnly(p){
-  buildAudioGraph();
-  setVoice(p.voice);
-  Tone.Transport.bpm.value = p.tempo;
-  buildPart(p.motif, p.transposeSemis, p.octaveShift, p.velMul);
-  if (Tone.Transport.state === "started" && part) part.start(0);
-}
-
 function playCard(m){
   curCard = m;
   /* AM125 is the locked engine the collection shipped on: 125 distinct
@@ -3704,9 +3694,22 @@ function playCard(m){
   const p = (typeof AM125 !== "undefined" && AM125.derive)
               ? AM125.derive(CARD_SEED(m.id))
               : deriveParams(CARD_SEED(m.id));
-  applyMusicOnly(p);
+  /* The MARK never changes — LOGO_STYLE stays "lines", so it is always the
+     6529 logo. What the card does change is its colour, its wave pattern and
+     its chaos: the glitch-map behaviour the collection is built on.
+
+     AM125 indexes a 10-pattern table; this card ships 9 (Sawtooth was cut on
+     purpose). Fold the index into range so every card lands on a real pattern
+     and no seed can ever point past the end. */
+  const safe = (typeof WAVE_PATTERNS !== "undefined" && WAVE_PATTERNS.length)
+    ? Object.assign({}, p, { waveIdx: ((p.waveIdx % WAVE_PATTERNS.length) + WAVE_PATTERNS.length) % WAVE_PATTERNS.length })
+    : p;
+  apply(safe, Tone.Transport.state === "started");
+  refreshStatus();
   document.getElementById("pnow").textContent =
-    "#" + m.id + " · " + (m.name || "") + " · " + p.motif.name + " · " + p.tempo + " BPM";
+    "#" + m.id + " · " + (m.name || "") + " · " + p.motif.name + " · " + p.tempo + " BPM · " +
+    safe.scheme.name + " · " + WAVE_PATTERNS[safe.waveIdx].name +
+    (safe.chaos ? " · chaos " + safe.chaos : "");
   document.getElementById("phits").style.display = "none";
   if (window.__flashNow) window.__flashNow();
   const pk = document.getElementById("picker");
