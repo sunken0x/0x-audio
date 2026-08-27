@@ -3682,6 +3682,10 @@ loadSeed(MEMES_CONTRACT, true);
    A Meme card is its contract plus its token number, so that pair
    is the seed. Same card in, same music out, every time.
    ============================================================ */
+/* the card's own ground colour — Cold Iron, the one the crowd was drawn on */
+const CARD_BG   = 0x080a10;
+/* how much of the engine's chaos this geometry can carry before it jitters */
+const CARD_FLOW = 0.35;
 const CARD_SEED = id => (MEMES_CONTRACT + id.toString(16).padStart(6,"0")).toLowerCase();
 let MEMES = [], curCard = null;
 
@@ -3701,14 +3705,29 @@ function playCard(m){
      AM125 indexes a 10-pattern table; this card ships 9 (Sawtooth was cut on
      purpose). Fold the index into range so every card lands on a real pattern
      and no seed can ever point past the end. */
-  const safe = (typeof WAVE_PATTERNS !== "undefined" && WAVE_PATTERNS.length)
-    ? Object.assign({}, p, { waveIdx: ((p.waveIdx % WAVE_PATTERNS.length) + WAVE_PATTERNS.length) % WAVE_PATTERNS.length })
-    : p;
+  const wIdx = (typeof WAVE_PATTERNS !== "undefined" && WAVE_PATTERNS.length)
+    ? ((p.waveIdx % WAVE_PATTERNS.length) + WAVE_PATTERNS.length) % WAVE_PATTERNS.length
+    : p.waveIdx;
+
+  /* The crowd is a flat SVG drawn on this card's own near-black. Let a card
+     repaint the background and that baked-in black shows up as boxes behind
+     the frogs. So a card colours the MARK, never the ground it stands on. */
+  const scheme = Object.assign({}, p.scheme, { bgColor: CARD_BG });
+
+  const safe = Object.assign({}, p, { waveIdx: wIdx, scheme: scheme });
   apply(safe, Tone.Transport.state === "started");
+
+  /* The logo is short line runs, not a full grid, so the engine's raw chaos
+     reads as jitter here rather than the liquid motion of an audio map.
+     Same ordering, gentler hand. */
+  currentGlitch  = (CHAOS_GLITCH[safe.chaos]  ?? 0) * CARD_FLOW;
+  currentOctaves = Math.min(CHAOS_OCTAVES[safe.chaos] ?? 0, 2);
+  if (linesGroup) buildLines();
+
   refreshStatus();
   document.getElementById("pnow").textContent =
     "#" + m.id + " · " + (m.name || "") + " · " + p.motif.name + " · " + p.tempo + " BPM · " +
-    safe.scheme.name + " · " + WAVE_PATTERNS[safe.waveIdx].name +
+    p.scheme.name + " · " + WAVE_PATTERNS[safe.waveIdx].name +
     (safe.chaos ? " · chaos " + safe.chaos : "");
   document.getElementById("phits").style.display = "none";
   if (window.__flashNow) window.__flashNow();
