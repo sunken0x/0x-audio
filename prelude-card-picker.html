@@ -3026,7 +3026,12 @@ function applyScheme(scheme) {
   }
 }
 
+/* How fast the resting motion moves. The ripples the piano throws are NOT
+   slowed by this — they stay locked to the notes. */
+const CARD_SPEED = 0.5;
+
 function updateLines(time) {
+  const wtime = time * CARD_SPEED;
   frameCount++;
   if (window.__stars) window.__stars.material.opacity = 0.68 + 0.22 * Math.sin(time * 0.0007);
   flashPulse *= 0.92;
@@ -3046,8 +3051,8 @@ function updateLines(time) {
       const d  = Math.sqrt(dx * dx + dy * dy);   // ripple distance from the mark's heart
       // EXACT Audio Maps motion — the engine's own formula, Z-only:
       // base wave * 0.22 + fractal chaos + piano ripples. Nothing invented.
-      const base   = waveAt(pos, time) * 0.25;   // flow bumped up (was 0.22)
-      const glitch = currentGlitch > 0 ? fractalNoise(pos.x, pos.y, time, currentOctaves) * currentGlitch : 0;
+      const base   = waveAt(pos, wtime) * 0.25;   // flow bumped up (was 0.22)
+      const glitch = currentGlitch > 0 ? fractalNoise(pos.x, pos.y, wtime, currentOctaves) * currentGlitch : 0;
       const ripple = rippleAt(d, time);
       scratch[i*3]     = pos.x;
       scratch[i*3 + 1] = pos.y;
@@ -3685,7 +3690,7 @@ loadSeed(MEMES_CONTRACT, true);
 /* the card's own ground colour — Cold Iron, the one the crowd was drawn on */
 const CARD_BG   = 0x080a10;
 /* how much of the engine's chaos this geometry can carry before it jitters */
-const CARD_FLOW = 0.35;
+const CARD_FLOW = 0.175;
 const CARD_SEED = id => (MEMES_CONTRACT + id.toString(16).padStart(6,"0")).toLowerCase();
 let MEMES = [], curCard = null;
 
